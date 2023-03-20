@@ -53,7 +53,8 @@ class OpenAIRuntime(LLMRuntimeBase):
         )
 
     async def _call_embeddings_impl(
-            self, input_data: Any, params: Optional[dict]) -> dict:
+        self, input_data: Any, params: Optional[dict]
+    ) -> dict:
         assert isinstance(input_data, pd.DataFrame)
         data = _df_to_embeddings_input(input_data)
         return await openai.Embedding.acreate(

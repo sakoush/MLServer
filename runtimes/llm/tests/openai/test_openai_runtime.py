@@ -8,8 +8,11 @@ import pytest
 from mlserver import ModelSettings
 from mlserver.types import InferenceRequest, RequestInput, InferenceResponse
 from mlserver_alibi_explain.common import convert_from_bytes
-from mlserver_llm.openai.openai_runtime import OpenAIRuntime, _df_to_messages, \
-    _df_to_embeddings_input
+from mlserver_llm.openai.openai_runtime import (
+    OpenAIRuntime,
+    _df_to_messages,
+    _df_to_embeddings_input,
+)
 
 
 @pytest.fixture
@@ -33,24 +36,21 @@ def chat_result() -> dict:
 @pytest.fixture
 def embeddings_result() -> dict:
     return {
-      "data": [
-        {
-          "embedding": [
-            -0.006929283495992422,
-            -0.005336422007530928,
-            -4.547132266452536e-05,
-            -0.024047505110502243
-          ],
-          "index": 0,
-          "object": "embedding"
-        }
-      ],
-      "model": "text-embedding-ada-002",
-      "object": "list",
-      "usage": {
-        "prompt_tokens": 5,
-        "total_tokens": 5
-      }
+        "data": [
+            {
+                "embedding": [
+                    -0.006929283495992422,
+                    -0.005336422007530928,
+                    -4.547132266452536e-05,
+                    -0.024047505110502243,
+                ],
+                "index": 0,
+                "object": "embedding",
+            }
+        ],
+        "model": "text-embedding-ada-002",
+        "object": "list",
+        "usage": {"prompt_tokens": 5, "total_tokens": 5},
     }
 
 
@@ -62,12 +62,11 @@ async def test_openai_chat__smoke(chat_result: dict):
         implementation=OpenAIRuntime,
         parameters={
             "extra": {
-                "config":
-                    {
-                        "api_key": dummy_api_key,
-                        "model_id": model_id,
-                        "model_type": "chat.completions"
-                    }
+                "config": {
+                    "api_key": dummy_api_key,
+                    "model_id": model_id,
+                    "model_type": "chat.completions",
+                }
             }
         },
     )
@@ -105,12 +104,11 @@ async def test_openai_embeddings__smoke(embeddings_result: dict):
         implementation=OpenAIRuntime,
         parameters={
             "extra": {
-                "config":
-                    {
-                        "api_key": dummy_api_key,
-                        "model_id": model_id,
-                        "model_type": "embeddings"
-                    }
+                "config": {
+                    "api_key": dummy_api_key,
+                    "model_id": model_id,
+                    "model_type": "embeddings",
+                }
             }
         },
     )
@@ -168,9 +166,7 @@ def test_convert_df_to_messages(df: pd.DataFrame, expected_messages: list[dict])
             ["this is a test input"],
         ),
         (
-            pd.DataFrame.from_dict(
-                {"input": ["input1", "input2"]}
-            ),
+            pd.DataFrame.from_dict({"input": ["input1", "input2"]}),
             [
                 "input1",
                 "input2",
@@ -196,17 +192,13 @@ async def test_api_key_and_org_not_set(api_key: str, organization: str):
     config = {
         "api_key": api_key,
         "model_id": model_id,
-        "model_type": "chat.completions"
+        "model_type": "chat.completions",
     }
     if organization:
         config["organization"] = organization
 
     model_settings = ModelSettings(
-        implementation=OpenAIRuntime, parameters={
-            "extra": {
-                "config": config
-            }
-        }
+        implementation=OpenAIRuntime, parameters={"extra": {"config": config}}
     )
     _ = OpenAIRuntime(model_settings)
 
