@@ -8,7 +8,9 @@ _ENV_PREFIX_OPENAI_SETTINGS = "MLSERVER_MODEL_OPENAI_"
 
 
 class OpenAIModelTypeEnum(str, Enum):
-    chat = "chat"
+    chat = "chat.completions"
+    completions = "completions"
+    embeddings = "embeddings"
 
 
 class OpenAISettings(BaseSettings):
@@ -21,5 +23,6 @@ class OpenAISettings(BaseSettings):
 
     api_key: str
     model_id: str
+    model_type: OpenAIModelTypeEnum
     organization: Optional[str]
     llm_parameters: Optional[dict]
