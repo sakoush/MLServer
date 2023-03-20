@@ -11,6 +11,7 @@ class OpenAIModelTypeEnum(str, Enum):
     chat = "chat.completions"
     completions = "completions"
     embeddings = "embeddings"
+    edits = "edits"
 
 
 class OpenAISettings(BaseSettings):

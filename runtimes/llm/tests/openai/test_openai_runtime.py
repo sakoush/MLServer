@@ -13,6 +13,7 @@ from mlserver_llm.openai.openai_runtime import (
     _df_to_message,
     _df_to_embeddings_input,
     _df_to_completion_prompt,
+    _df_to_instruction,
 )
 
 
@@ -71,6 +72,20 @@ def _get_completions_result() -> dict:
     }
 
 
+def _get_instructions_result() -> dict:
+    return {
+        "object": "edit",
+        "created": 1589478378,
+        "choices": [
+            {
+                "text": "What day of the week is it?",
+                "index": 0,
+            }
+        ],
+        "usage": {"prompt_tokens": 25, "completion_tokens": 32, "total_tokens": 57},
+    }
+
+
 async def test_openai_embeddings__smoke(embeddings_result: dict):
     dummy_api_key = "dummy_key"
     model_id = "dummy_model"
@@ -114,9 +129,9 @@ async def test_openai_embeddings__smoke(embeddings_result: dict):
     "model_type, openai_interface, input_request, output_result",
     [
         (
-                "chat.completions",
-                "openai.ChatCompletion",
-                InferenceRequest(
+            "chat.completions",
+            "openai.ChatCompletion",
+            InferenceRequest(
                 inputs=[
                     RequestInput(
                         name="role", shape=[1, 1], datatype="BYTES", data=["dummy"]
@@ -126,7 +141,7 @@ async def test_openai_embeddings__smoke(embeddings_result: dict):
                     ),
                 ]
             ),
-                _get_chat_result(),
+            _get_chat_result(),
         ),
         (
             "completions",
@@ -151,6 +166,21 @@ async def test_openai_embeddings__smoke(embeddings_result: dict):
                 ]
             ),
             _get_embeddings_result(),
+        ),
+        (
+            "edits",
+            "openai.Edit",
+            InferenceRequest(
+                inputs=[
+                    RequestInput(
+                        name="input", shape=[1, 1], datatype="BYTES", data=["i"]
+                    ),
+                    RequestInput(
+                        name="instruction", shape=[1, 1], datatype="BYTES", data=["ins"]
+                    ),
+                ]
+            ),
+            _get_instructions_result(),
         ),
     ],
 )
@@ -253,6 +283,31 @@ def test_convert_df_to_embeddings(df: pd.DataFrame, expected_input: list[str]):
 def test_convert_df_to_prompt(df: pd.DataFrame, expected_prompt: list[str]):
     prompt = _df_to_completion_prompt(df)
     assert prompt == expected_prompt
+
+
+@pytest.mark.parametrize(
+    "df, expected_input, expected_instruction",
+    [
+        (
+            pd.DataFrame.from_dict({"input": ["dummy"], "instruction": ["hello"]}),
+            "dummy",
+            "hello",
+        ),
+        (
+            pd.DataFrame.from_dict(
+                {"input": ["dummy1", "dummy2"], "instruction": ["hello1", "hello2"]}
+            ),
+            "dummy1",
+            "hello1",
+        ),
+    ],
+)
+def test_convert_df_to_instruction(
+    df: pd.DataFrame, expected_input: str, expected_instruction: str
+):
+    input_string, instruction = _df_to_instruction(df)
+    assert input_string == expected_input
+    assert instruction == expected_instruction
 
 
 @pytest.mark.parametrize(
