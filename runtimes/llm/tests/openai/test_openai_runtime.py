@@ -1,3 +1,4 @@
+import json
 from unittest.mock import patch
 
 import openai
@@ -6,6 +7,7 @@ import pytest
 
 from mlserver import ModelSettings
 from mlserver.types import InferenceRequest, RequestInput, InferenceResponse
+from mlserver_alibi_explain.common import convert_from_bytes
 from mlserver_llm.openai.openai_runtime import OpenAIRuntime, _df_to_messages
 
 
@@ -57,6 +59,10 @@ async def test_openai_chat__smoke(chat_result: dict):
             )
         )
         assert isinstance(res, InferenceResponse)
+        output = convert_from_bytes(res.outputs[0], ty=str)
+        output_dict = json.loads(output)
+        assert output_dict == chat_result
+        assert res.outputs[0].name == "output"
 
 
 @pytest.mark.parametrize(
