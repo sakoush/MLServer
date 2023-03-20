@@ -14,6 +14,7 @@ from mlserver_llm.openai.openai_runtime import (
     _df_to_embeddings_input,
     _df_to_completion_prompt,
     _df_to_instruction,
+    _df_to_images,
 )
 
 
@@ -84,6 +85,10 @@ def _get_instructions_result() -> dict:
         ],
         "usage": {"prompt_tokens": 25, "completion_tokens": 32, "total_tokens": 57},
     }
+
+
+def _get_images_result() -> dict:
+    return {"created": 1589478378, "data": [{"url": "https://"}, {"url": "https://"}]}
 
 
 async def test_openai_embeddings__smoke(embeddings_result: dict):
@@ -181,6 +186,18 @@ async def test_openai_embeddings__smoke(embeddings_result: dict):
                 ]
             ),
             _get_instructions_result(),
+        ),
+        (
+            "images.generations",
+            "openai.Image",
+            InferenceRequest(
+                inputs=[
+                    RequestInput(
+                        name="prompt", shape=[1, 1], datatype="BYTES", data=["image"]
+                    ),
+                ]
+            ),
+            _get_images_result(),
         ),
     ],
 )
@@ -295,10 +312,10 @@ def test_convert_df_to_prompt(df: pd.DataFrame, expected_prompt: list[str]):
         ),
         (
             pd.DataFrame.from_dict(
-                {"input": ["dummy1", "dummy2"], "instruction": ["hello1", "hello2"]}
+                {"input": ["dummy 1", "dummy 2"], "instruction": ["hello 1", "hello 2"]}
             ),
-            "dummy1",
-            "hello1",
+            "dummy 1",
+            "hello 1",
         ),
     ],
 )
@@ -308,6 +325,24 @@ def test_convert_df_to_instruction(
     input_string, instruction = _df_to_instruction(df)
     assert input_string == expected_input
     assert instruction == expected_instruction
+
+
+@pytest.mark.parametrize(
+    "df, expected_prompt",
+    [
+        (
+            pd.DataFrame.from_dict({"prompt": ["dummy"]}),
+            "dummy",
+        ),
+        (
+            pd.DataFrame.from_dict({"prompt": ["dummy hello1", "dummy hello2"]}),
+            "dummy hello1",
+        ),
+    ],
+)
+def test_convert_df_to_images(df: pd.DataFrame, expected_prompt: str):
+    prompt = _df_to_images(df)
+    assert prompt == expected_prompt
 
 
 @pytest.mark.parametrize(

@@ -23,7 +23,10 @@ class OpenAIRuntime(LLMRuntimeBase):
         assert settings.parameters.extra is not None
         config = settings.parameters.extra["config"]  # type: ignore
         self._openai_settings = OpenAISettings(**config)  # type: ignore
-
+        if self._openai_settings.model_type != OpenAIModelTypeEnum.images:
+            assert (
+                self._openai_settings.model_id
+            ), f"model_id required for {self._openai_settings.model_type}"
         super().__init__(settings)
 
     async def _call_impl(
@@ -39,6 +42,8 @@ class OpenAIRuntime(LLMRuntimeBase):
             result = await self._call_embeddings_impl(input_data, params)
         elif self._openai_settings.model_type == OpenAIModelTypeEnum.edits:
             result = await self._call_instruction_impl(input_data, params)
+        elif self._openai_settings.model_type == OpenAIModelTypeEnum.images:
+            result = await self._call_images_generations_impl(input_data, params)
         else:
             raise TypeError(f"{self._openai_settings.model_type} not supported")
 
@@ -96,6 +101,19 @@ class OpenAIRuntime(LLMRuntimeBase):
             **params,  # type: ignore
         )
 
+    async def _call_images_generations_impl(
+        self, input_data: Any, params: Optional[dict]
+    ) -> dict:
+        # note: no model_id for this api
+        assert isinstance(input_data, pd.DataFrame)
+        data = _df_to_images(input_data)
+        return await openai.Image.acreate(
+            api_key=self._openai_settings.api_key,
+            organization=self._openai_settings.organization,
+            prompt=data,
+            **params,  # type: ignore
+        )
+
 
 def _df_to_message(df: pd.DataFrame) -> list[dict]:
     assert "role" in df.columns, "user field not present"
@@ -117,3 +135,8 @@ def _df_to_instruction(df: pd.DataFrame) -> Tuple[str, str]:
     assert "input" in df.columns, "input field not present"
     assert "instruction" in df.columns, "instruction field not present"
     return df[["input", "instruction"]].values[0].flatten().tolist()
+
+
+def _df_to_images(df: pd.DataFrame) -> str:
+    assert "prompt" in df.columns, "prompt field not present"
+    return df[["prompt"]].values[0].flatten()[0]

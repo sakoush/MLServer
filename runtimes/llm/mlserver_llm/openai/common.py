@@ -12,6 +12,7 @@ class OpenAIModelTypeEnum(str, Enum):
     completions = "completions"
     embeddings = "embeddings"
     edits = "edits"
+    images = "images.generations"
 
 
 class OpenAISettings(BaseSettings):
@@ -23,7 +24,7 @@ class OpenAISettings(BaseSettings):
         env_prefix = _ENV_PREFIX_OPENAI_SETTINGS
 
     api_key: str
-    model_id: str
+    model_id: Optional[str]
     model_type: OpenAIModelTypeEnum
     organization: Optional[str]
     llm_parameters: Optional[dict]
