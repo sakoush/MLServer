@@ -10,12 +10,12 @@ from mlserver.types import InferenceRequest, RequestInput, InferenceResponse
 from mlserver_alibi_explain.common import convert_from_bytes
 from mlserver_llm.openai.openai_runtime import (
     OpenAIRuntime,
-    _df_to_messages,
+    _df_to_message,
     _df_to_embeddings_input,
+    _df_to_completion_prompt,
 )
 
 
-@pytest.fixture
 def chat_result() -> dict:
     return {
         "id": "chatcmpl-abc123",
@@ -33,7 +33,6 @@ def chat_result() -> dict:
     }
 
 
-@pytest.fixture
 def embeddings_result() -> dict:
     return {
         "data": [
@@ -54,46 +53,22 @@ def embeddings_result() -> dict:
     }
 
 
-async def test_openai_chat__smoke(chat_result: dict):
-    dummy_api_key = "dummy_key"
-    model_id = "dummy_model"
-
-    model_settings = ModelSettings(
-        implementation=OpenAIRuntime,
-        parameters={
-            "extra": {
-                "config": {
-                    "api_key": dummy_api_key,
-                    "model_id": model_id,
-                    "model_type": "chat.completions",
-                }
+def completion_result() -> dict:
+    return {
+        "id": "cmpl-uqkvlQyYK7bGYrRHQ0eXlWi7",
+        "object": "text_completion",
+        "created": 1589478378,
+        "model": "text-davinci-003",
+        "choices": [
+            {
+                "text": "\n\nThis is indeed a test",
+                "index": 0,
+                "logprobs": "null",
+                "finish_reason": "length",
             }
-        },
-    )
-    rt = OpenAIRuntime(model_settings)
-
-    async def _mocked_chat_impl(**kwargs):
-        return chat_result
-
-    with patch("openai.ChatCompletion") as mock_chat:
-        mock_chat.acreate = _mocked_chat_impl
-        res = await rt.predict(
-            InferenceRequest(
-                inputs=[
-                    RequestInput(
-                        name="role", shape=[1, 1], datatype="BYTES", data=["dummy"]
-                    ),
-                    RequestInput(
-                        name="content", shape=[1, 1], datatype="BYTES", data=["dummy"]
-                    ),
-                ]
-            )
-        )
-        assert isinstance(res, InferenceResponse)
-        output = convert_from_bytes(res.outputs[0], ty=str)
-        output_dict = json.loads(output)
-        assert output_dict == chat_result
-        assert res.outputs[0].name == "output"
+        ],
+        "usage": {"prompt_tokens": 5, "completion_tokens": 7, "total_tokens": 12},
+    }
 
 
 async def test_openai_embeddings__smoke(embeddings_result: dict):
@@ -136,6 +111,86 @@ async def test_openai_embeddings__smoke(embeddings_result: dict):
 
 
 @pytest.mark.parametrize(
+    "model_type, openai_interface, input_request, output_result",
+    [
+        (
+            "chat.completions",
+            "openai.ChatCompletion",
+            InferenceRequest(
+                inputs=[
+                    RequestInput(
+                        name="role", shape=[1, 1], datatype="BYTES", data=["dummy"]
+                    ),
+                    RequestInput(
+                        name="content", shape=[1, 1], datatype="BYTES", data=["dummy"]
+                    ),
+                ]
+            ),
+            chat_result(),
+        ),
+        (
+            "completions",
+            "openai.Completion",
+            InferenceRequest(
+                inputs=[
+                    RequestInput(
+                        name="prompt", shape=[1, 1], datatype="BYTES", data=["prompt"]
+                    ),
+                ]
+            ),
+            completion_result(),
+        ),
+        (
+            "embeddings",
+            "openai.Embedding",
+            InferenceRequest(
+                inputs=[
+                    RequestInput(
+                        name="input", shape=[1, 1], datatype="BYTES", data=["input"]
+                    ),
+                ]
+            ),
+            embeddings_result(),
+        ),
+    ],
+)
+async def test_openai_runtime__smoke(
+    model_type: str,
+    openai_interface: str,
+    input_request: InferenceRequest,
+    output_result: dict,
+):
+    dummy_api_key = "dummy_key"
+    model_id = "dummy_model"
+
+    model_settings = ModelSettings(
+        implementation=OpenAIRuntime,
+        parameters={
+            "extra": {
+                "config": {
+                    "api_key": dummy_api_key,
+                    "model_id": model_id,
+                    "model_type": model_type,
+                }
+            }
+        },
+    )
+    rt = OpenAIRuntime(model_settings)
+
+    async def _mocked_impl(**kwargs):
+        return output_result
+
+    with patch(openai_interface) as mock_interface:
+        mock_interface.acreate = _mocked_impl
+        res = await rt.predict(input_request)
+        assert isinstance(res, InferenceResponse)
+        output = convert_from_bytes(res.outputs[0], ty=str)
+        output_dict = json.loads(output)
+        assert output_dict == output_result
+        assert res.outputs[0].name == "output"
+
+
+@pytest.mark.parametrize(
     "df, expected_messages",
     [
         (
@@ -154,7 +209,7 @@ async def test_openai_embeddings__smoke(embeddings_result: dict):
     ],
 )
 def test_convert_df_to_messages(df: pd.DataFrame, expected_messages: list[dict]):
-    messages = _df_to_messages(df)
+    messages = _df_to_message(df)
     assert messages == expected_messages
 
 
@@ -177,6 +232,27 @@ def test_convert_df_to_messages(df: pd.DataFrame, expected_messages: list[dict])
 def test_convert_df_to_embeddings(df: pd.DataFrame, expected_input: list[str]):
     inputs = _df_to_embeddings_input(df)
     assert inputs == expected_input
+
+
+@pytest.mark.parametrize(
+    "df, expected_prompt",
+    [
+        (
+            pd.DataFrame.from_dict({"prompt": ["this is a test prompt"]}),
+            ["this is a test prompt"],
+        ),
+        (
+            pd.DataFrame.from_dict({"prompt": ["prompt1", "prompt2"]}),
+            [
+                "prompt1",
+                "prompt2",
+            ],
+        ),
+    ],
+)
+def test_convert_df_to_prompt(df: pd.DataFrame, expected_prompt: list[str]):
+    prompt = _df_to_completion_prompt(df)
+    assert prompt == expected_prompt
 
 
 @pytest.mark.parametrize(
