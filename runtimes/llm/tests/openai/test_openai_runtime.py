@@ -16,7 +16,7 @@ from mlserver_llm.openai.openai_runtime import (
 )
 
 
-def chat_result() -> dict:
+def _get_chat_result() -> dict:
     return {
         "id": "chatcmpl-abc123",
         "object": "chat.completion",
@@ -33,7 +33,7 @@ def chat_result() -> dict:
     }
 
 
-def embeddings_result() -> dict:
+def _get_embeddings_result() -> dict:
     return {
         "data": [
             {
@@ -53,7 +53,7 @@ def embeddings_result() -> dict:
     }
 
 
-def completion_result() -> dict:
+def _get_completions_result() -> dict:
     return {
         "id": "cmpl-uqkvlQyYK7bGYrRHQ0eXlWi7",
         "object": "text_completion",
@@ -114,9 +114,9 @@ async def test_openai_embeddings__smoke(embeddings_result: dict):
     "model_type, openai_interface, input_request, output_result",
     [
         (
-            "chat.completions",
-            "openai.ChatCompletion",
-            InferenceRequest(
+                "chat.completions",
+                "openai.ChatCompletion",
+                InferenceRequest(
                 inputs=[
                     RequestInput(
                         name="role", shape=[1, 1], datatype="BYTES", data=["dummy"]
@@ -126,7 +126,7 @@ async def test_openai_embeddings__smoke(embeddings_result: dict):
                     ),
                 ]
             ),
-            chat_result(),
+                _get_chat_result(),
         ),
         (
             "completions",
@@ -138,7 +138,7 @@ async def test_openai_embeddings__smoke(embeddings_result: dict):
                     ),
                 ]
             ),
-            completion_result(),
+            _get_completions_result(),
         ),
         (
             "embeddings",
@@ -150,7 +150,7 @@ async def test_openai_embeddings__smoke(embeddings_result: dict):
                     ),
                 ]
             ),
-            embeddings_result(),
+            _get_embeddings_result(),
         ),
     ],
 )
