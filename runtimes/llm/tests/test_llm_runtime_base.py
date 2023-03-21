@@ -16,7 +16,7 @@ from mlserver.types import (
     Parameters,
 )
 from mlserver_llm.openai.openai_runtime import OpenAIRuntime
-from mlserver_llm.runtime import LLMRuntimeBase, _get_predict_parameters, LLMRuntime
+from mlserver_llm.runtime import LLMProviderRuntimeBase, _get_predict_parameters, LLMRuntime
 
 
 @pytest.fixture
@@ -35,7 +35,7 @@ def inference_request(input_values: dict) -> InferenceRequest:
 
 
 async def test_runtime_base__smoke(inference_request: InferenceRequest):
-    class _DummyModel(LLMRuntimeBase):
+    class _DummyModel(LLMProviderRuntimeBase):
         def __init__(self, settings: ModelSettings):
             super().__init__(settings)
 
@@ -46,7 +46,7 @@ async def test_runtime_base__smoke(inference_request: InferenceRequest):
                 name="foo", datatype="INT32", shape=[1, 1, 1], data=[1]
             )
 
-    ml = _DummyModel(settings=ModelSettings(implementation=LLMRuntimeBase))  # dummy
+    ml = _DummyModel(settings=ModelSettings(implementation=LLMProviderRuntimeBase))  # dummy
 
     res = await ml.predict(inference_request)
     assert isinstance(res, InferenceResponse)

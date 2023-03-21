@@ -8,10 +8,10 @@ from mlserver.codecs import StringCodec
 from mlserver import ModelSettings
 from mlserver.types import ResponseOutput
 from .common import OpenAISettings, OpenAIModelTypeEnum
-from ..runtime import LLMRuntimeBase
+from ..runtime import LLMProviderRuntimeBase
 
 
-class OpenAIRuntime(LLMRuntimeBase):
+class OpenAIRuntime(LLMProviderRuntimeBase):
     """
     Runtime for OpenAI
     """

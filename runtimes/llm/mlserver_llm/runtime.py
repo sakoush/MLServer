@@ -15,7 +15,7 @@ from .common import LLM_CALL_PARAMETERS_TAG, PROVIDER_ID_TAG
 from .dependency_reference import get_mlmodel_class_as_str, import_and_get_class
 
 
-class LLMRuntimeBase(MLModel):
+class LLMProviderRuntimeBase(MLModel):
     """
     Base class for LLM models hosted by a provider (e.g. OpenAI)
     """
