@@ -59,7 +59,11 @@ async def test_runtime_factory__smoke():
             parameters={
                 "extra": {
                     "provider_id": "openai",
-                    "config": {"model_id": "gpt-3.5-turbo", "api_key": "dummy"},
+                    "config": {
+                        "model_id": "gpt-3.5-turbo",
+                        "api_key": "dummy",
+                        "model_type": "chat.completions"
+                    },
                 }
             },
         )

@@ -91,45 +91,6 @@ def _get_images_result() -> dict:
     return {"created": 1589478378, "data": [{"url": "https://"}, {"url": "https://"}]}
 
 
-async def test_openai_embeddings__smoke(embeddings_result: dict):
-    dummy_api_key = "dummy_key"
-    model_id = "dummy_model"
-
-    model_settings = ModelSettings(
-        implementation=OpenAIRuntime,
-        parameters={
-            "extra": {
-                "config": {
-                    "api_key": dummy_api_key,
-                    "model_id": model_id,
-                    "model_type": "embeddings",
-                }
-            }
-        },
-    )
-    rt = OpenAIRuntime(model_settings)
-
-    async def _mocked_embeddings_impl(**kwargs):
-        return embeddings_result
-
-    with patch("openai.Embedding") as mock_embedings:
-        mock_embedings.acreate = _mocked_embeddings_impl
-        res = await rt.predict(
-            InferenceRequest(
-                inputs=[
-                    RequestInput(
-                        name="input", shape=[1, 1], datatype="BYTES", data=["dummy"]
-                    ),
-                ]
-            )
-        )
-        assert isinstance(res, InferenceResponse)
-        output = convert_from_bytes(res.outputs[0], ty=str)
-        output_dict = json.loads(output)
-        assert output_dict == embeddings_result
-        assert res.outputs[0].name == "output"
-
-
 @pytest.mark.parametrize(
     "model_type, openai_interface, input_request, output_result",
     [
