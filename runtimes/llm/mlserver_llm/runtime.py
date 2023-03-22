@@ -11,8 +11,11 @@ from mlserver.types import (
     InferenceResponse,
     ResponseOutput,
 )
+from mlserver.utils import get_model_uri
 from .common import LLM_CALL_PARAMETERS_TAG, PROVIDER_ID_TAG
 from .dependency_reference import get_mlmodel_class_as_str, import_and_get_class
+from .prompt.base import PromptTemplateBase
+from .prompt.string_based import FStringPromptTemplate
 
 
 class LLMProviderRuntimeBase(MLModel):
@@ -21,7 +24,17 @@ class LLMProviderRuntimeBase(MLModel):
     """
 
     def __init__(self, settings: ModelSettings):
+        self._prompt_template: Optional[PromptTemplateBase] = None
         super().__init__(settings)
+
+    async def load(self) -> bool:
+        # if uri is not none there is a prompt template
+        if self._settings.parameters.uri:
+            prompt_template_uri = await get_model_uri(self._settings)
+            self._prompt_template = FStringPromptTemplate(prompt_template_uri)
+
+        self.ready = True
+        return self.ready
 
     async def predict(self, payload: InferenceRequest) -> InferenceResponse:
         """

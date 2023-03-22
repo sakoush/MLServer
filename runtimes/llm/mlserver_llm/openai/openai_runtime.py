@@ -3,9 +3,9 @@ from typing import Any, Optional, Tuple
 
 import openai
 import pandas as pd
-from mlserver.codecs import StringCodec
 
 from mlserver import ModelSettings
+from mlserver.codecs import StringCodec
 from mlserver.types import ResponseOutput
 from .common import OpenAISettings, OpenAIModelTypeEnum
 from ..runtime import LLMProviderRuntimeBase
