@@ -1,5 +1,7 @@
 from typing import Any, Optional
 
+import pandas as pd
+
 from mlserver.codecs import (
     PandasCodec,
 )
@@ -42,9 +44,12 @@ class LLMProviderRuntimeBase(MLModel):
         """
 
         # TODO: what are the better codecs for the different types of openai models?
-        input_data = self.decode_request(payload, default_codec=PandasCodec)
+        input_data = PandasCodec.decode_request(payload)
         call_parameters = _get_predict_parameters(payload)
         # TODO: deal with error and retries
+        if self._prompt_template:
+            input_data = _apply_template(input_data)  # TODO
+
         output_data = await self._call_impl(input_data, call_parameters)
 
         return InferenceResponse(
@@ -66,6 +71,11 @@ def _get_predict_parameters(payload: InferenceRequest) -> dict:
         if LLM_CALL_PARAMETERS_TAG in settings_dict:
             runtime_parameters = settings_dict[LLM_CALL_PARAMETERS_TAG]
     return runtime_parameters
+
+
+def _apply_template(df: pd.DataFrame) -> pd.DataFrame:
+    # TODO
+    pass
 
 
 class LLMRuntime(WrapperMLModel):
