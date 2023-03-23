@@ -34,6 +34,7 @@ class OpenAIRuntime(LLMProviderRuntimeBase):
         self, input_data: Any, params: Optional[dict]
     ) -> ResponseOutput:
         # TODO: make use of static parameters
+        # TODO: implement prompt template in all valid cases
 
         if self._openai_settings.model_type == OpenAIModelTypeEnum.chat:
             result = await self._call_chat_impl(input_data, params)

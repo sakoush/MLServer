@@ -101,7 +101,10 @@ def _decode_and_apply_prompt(
 def _apply_prompt_template(
     static_prompt_template: PromptTemplate, input_data: dict[str, ndarray]
 ) -> pd.DataFrame:
-    data_dict = {k: [i.decode("utf-8") for i in val] for k, val in input_data.items()}
+    data_dict = {
+        k: [i.decode("utf-8") if isinstance(i, bytes) else i for i in val]
+        for k, val in input_data.items()
+    }
     prompt = static_prompt_template.format(**data_dict)
     return pd.DataFrame([prompt], columns=[PROMPT_TEMPLATE_RESULT_FIELD])
 

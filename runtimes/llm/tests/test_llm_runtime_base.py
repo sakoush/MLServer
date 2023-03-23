@@ -29,15 +29,15 @@ from mlserver_llm.runtime import (
 
 @pytest.fixture
 def input_values() -> dict:
-    return {"foo": np.array([[1, 2]], dtype=np.int32), "bar": ["asd", "qwe"]}
+    return {"i": ["asd", "qwe"]}
 
 
 @pytest.fixture
 def inference_request(input_values: dict) -> InferenceRequest:
     return InferenceRequest(
         inputs=[
-            StringCodec.encode_input("foo", input_values["bar"]),
-            StringCodec.encode_input("bar", input_values["bar"]),
+            StringCodec.encode_input("foo", input_values["i"]),
+            StringCodec.encode_input("bar", input_values["i"]),
         ]
     )
 
