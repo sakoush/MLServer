@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from string import Formatter
 from typing import Any, Union
@@ -12,3 +13,8 @@ class FStringPromptTemplate(PromptTemplateBase):
 
     def format(self, **kwargs: Any) -> str:
         return Formatter().format(self._str, **kwargs)
+
+
+class SimplePromptTemplate(PromptTemplateBase):
+    def format(self, **kwargs: Any) -> str:
+        return json.dumps(kwargs)

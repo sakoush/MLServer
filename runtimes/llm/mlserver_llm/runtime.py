@@ -27,13 +27,19 @@ class LLMProviderRuntimeBase(MLModel):
 
     def __init__(self, settings: ModelSettings):
         self._prompt_template: Optional[PromptTemplateBase] = None
+        if self._settings.parameters.extra:
+            self._with_prompt_template = self._settings.parameters.extra.get(
+                "with_prompt_template", default=False)
+        else:
+            self._with_prompt_template = False
         super().__init__(settings)
 
     async def load(self) -> bool:
-        # if uri is not none there is a prompt template
-        if self._settings.parameters.uri:
-            prompt_template_uri = await get_model_uri(self._settings)
-            self._prompt_template = FStringPromptTemplate(prompt_template_uri)
+        # if uri is not none there is a prompt template to load
+        if self._with_prompt_template:
+            if self._settings.parameters.uri:
+                prompt_template_uri = await get_model_uri(self._settings)
+                self._prompt_template = FStringPromptTemplate(prompt_template_uri)
 
         self.ready = True
         return self.ready
@@ -48,7 +54,7 @@ class LLMProviderRuntimeBase(MLModel):
         call_parameters = _get_predict_parameters(payload)
         # TODO: deal with error and retries
         if self._prompt_template:
-            input_data = _apply_template(input_data)  # TODO
+            input_data = _apply_prompt_template(input_data)  # TODO
 
         output_data = await self._call_impl(input_data, call_parameters)
 
@@ -73,7 +79,7 @@ def _get_predict_parameters(payload: InferenceRequest) -> dict:
     return runtime_parameters
 
 
-def _apply_template(df: pd.DataFrame) -> pd.DataFrame:
+def _apply_prompt_template(df: pd.DataFrame) -> pd.DataFrame:
     # TODO
     pass
 

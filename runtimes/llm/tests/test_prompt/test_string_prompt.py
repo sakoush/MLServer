@@ -3,7 +3,7 @@ import tempfile
 
 import pytest
 
-from mlserver_llm.prompt.string_based import FStringPromptTemplate
+from mlserver_llm.prompt.string_based import FStringPromptTemplate, SimplePromptTemplate
 
 
 @pytest.mark.parametrize(
@@ -54,3 +54,23 @@ def test_string_prompt_template__smoke(
         assert res == expected_string
 
 
+@pytest.mark.parametrize(
+    "args, expected_string",
+    [
+        (
+            {},
+            "{}"
+        ),
+        (
+            {
+                "input_1": "hello there",
+                "input_2": "hi"
+            },
+            """{"input_1": "hello there", "input_2": "hi"}"""
+        ),
+    ],
+)
+def test_simple_prompt_template__smoke(args: dict, expected_string: str):
+    prompt = SimplePromptTemplate()
+    res = prompt.format(**args)
+    assert res == expected_string
