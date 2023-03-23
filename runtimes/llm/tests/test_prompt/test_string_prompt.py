@@ -9,11 +9,7 @@ from mlserver_llm.prompt.string_based import FStringPromptTemplate, SimplePrompt
 @pytest.mark.parametrize(
     "template, args, expected_string",
     [
-        (
-            "hello",
-            {},
-            "hello"
-        ),
+        ("hello", {}, "hello"),
         (
             """
             this is a template
@@ -23,12 +19,8 @@ from mlserver_llm.prompt.string_based import FStringPromptTemplate, SimplePrompt
 
             {input_2}
             end
-            """
-            ,
-            {
-                "input_1": "hello there",
-                "input_2": "hi"
-            },
+            """,
+            {"input_1": "hello there", "input_2": "hi"},
             """
             this is a template
 
@@ -37,16 +29,15 @@ from mlserver_llm.prompt.string_based import FStringPromptTemplate, SimplePrompt
 
             hi
             end
-            """
+            """,
         ),
     ],
 )
-def test_string_prompt_template__smoke(
-        template: str, args: dict, expected_string: str):
+def test_string_prompt_template__smoke(template: str, args: dict, expected_string: str):
     with tempfile.TemporaryDirectory() as tempdir:
         # you can e.g. create a file here:
-        tmp_path = os.path.join(tempdir, 'template.txt')
-        with open(tmp_path, 'w') as f:
+        tmp_path = os.path.join(tempdir, "template.txt")
+        with open(tmp_path, "w") as f:
             f.write(template)
 
         prompt = FStringPromptTemplate(tmp_path)
@@ -57,16 +48,10 @@ def test_string_prompt_template__smoke(
 @pytest.mark.parametrize(
     "args, expected_string",
     [
+        ({}, "{}"),
         (
-            {},
-            "{}"
-        ),
-        (
-            {
-                "input_1": "hello there",
-                "input_2": "hi"
-            },
-            """{"input_1": "hello there", "input_2": "hi"}"""
+            {"input_1": "hello there", "input_2": "hi"},
+            """{"input_1": "hello there", "input_2": "hi"}""",
         ),
     ],
 )

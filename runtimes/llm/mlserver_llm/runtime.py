@@ -31,7 +31,8 @@ class LLMProviderRuntimeBase(MLModel):
         self._static_prompt_template: Optional[PromptTemplate] = None
         if settings.parameters and settings.parameters.extra:
             self._with_prompt_template = settings.parameters.extra.get(
-                "with_prompt_template", False)
+                "with_prompt_template", False
+            )
         else:
             self._with_prompt_template = False
         super().__init__(settings)
@@ -40,10 +41,10 @@ class LLMProviderRuntimeBase(MLModel):
         # if uri is not none there is a prompt template to load
         if self._with_prompt_template:
             if self._settings.parameters.uri:
-                prompt_template_uri = await get_model_uri(
-                    self._settings)
+                prompt_template_uri = await get_model_uri(self._settings)
                 self._static_prompt_template = FStringPromptTemplate(
-                    prompt_template_uri)
+                    prompt_template_uri
+                )
             else:
                 self._static_prompt_template = SimplePromptTemplate()
 
@@ -85,16 +86,17 @@ def _get_predict_parameters(payload: InferenceRequest) -> dict:
 
 
 def _decode_and_apply_prompt(
-        prompt: PromptTemplate, payload: InferenceRequest) -> pd.DataFrame:
+    prompt: PromptTemplate, payload: InferenceRequest
+) -> pd.DataFrame:
+    # TODO: implement a variation of `TensorDictCodec` to produce dict[str, list[str]]
     input_data_raw = TensorDictCodec.decode_request(payload)
-    input_data = _apply_prompt_template(
-        prompt, input_data_raw)
+    input_data = _apply_prompt_template(prompt, input_data_raw)
     return input_data
 
 
 def _apply_prompt_template(
-        static_prompt_template: PromptTemplate,
-        input_data: dict[str, ndarray]) -> pd.DataFrame:
+    static_prompt_template: PromptTemplate, input_data: dict[str, ndarray]
+) -> pd.DataFrame:
     data_dict = {k: [i.decode("utf-8") for i in val] for k, val in input_data.items()}
     prompt = static_prompt_template.format(**data_dict)
     return pd.DataFrame([prompt], columns=["prompt"])

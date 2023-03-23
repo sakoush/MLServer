@@ -18,8 +18,12 @@ from mlserver.types import (
 )
 from mlserver_llm.openai.openai_runtime import OpenAIRuntime
 from mlserver_llm.prompt.string_based import SimplePromptTemplate
-from mlserver_llm.runtime import LLMProviderRuntimeBase, _get_predict_parameters, \
-    LLMRuntime, _decode_and_apply_prompt
+from mlserver_llm.runtime import (
+    LLMProviderRuntimeBase,
+    _get_predict_parameters,
+    LLMRuntime,
+    _decode_and_apply_prompt,
+)
 
 
 @pytest.fixture
@@ -37,24 +41,14 @@ def inference_request(input_values: dict) -> InferenceRequest:
     )
 
 
-@pytest.mark.parametrize(
-    "extra",
-    [
-        None,
-        {
-            "with_prompt_template": True
-        }
-
-    ]
-)
-async def test_runtime_base__smoke(
-        inference_request: InferenceRequest, extra: dict):
+@pytest.mark.parametrize("extra", [None, {"with_prompt_template": True}])
+async def test_runtime_base__smoke(inference_request: InferenceRequest, extra: dict):
     class _DummyModel(LLMProviderRuntimeBase):
         def __init__(self, settings: ModelSettings):
             super().__init__(settings)
 
         async def _call_impl(
-                self, input_data: Any, params: Optional[dict]
+            self, input_data: Any, params: Optional[dict]
         ) -> ResponseOutput:
             assert isinstance(input_data, pd.DataFrame)
             return ResponseOutput(
@@ -63,11 +57,9 @@ async def test_runtime_base__smoke(
 
     ml = _DummyModel(
         settings=ModelSettings(
-            implementation=LLMProviderRuntimeBase,
-            parameters={
-                "extra": extra
-            }
-        ))  # dummy
+            implementation=LLMProviderRuntimeBase, parameters={"extra": extra}
+        )
+    )  # dummy
 
     await ml.load()
     res = await ml.predict(inference_request)
@@ -85,7 +77,7 @@ async def test_runtime_base__smoke(
                     "config": {
                         "model_id": "gpt-3.5-turbo",
                         "api_key": "dummy",
-                        "model_type": "chat.completions"
+                        "model_type": "chat.completions",
                     },
                 }
             },
@@ -99,7 +91,7 @@ async def test_runtime_base__smoke(
                     "config": {
                         "model_id": "gpt-3.5-turbo",
                         "api_key": "dummy",
-                        "model_type": "chat.completions"
+                        "model_type": "chat.completions",
                     },
                 }
             },
@@ -107,9 +99,7 @@ async def test_runtime_base__smoke(
     ],
 )
 async def test_runtime_factory__smoke(settings: ModelSettings):
-    ml = LLMRuntime(
-        settings=settings
-    )
+    ml = LLMRuntime(settings=settings)
     assert isinstance(ml._rt, OpenAIRuntime)
 
 
@@ -117,30 +107,30 @@ async def test_runtime_factory__smoke(settings: ModelSettings):
     "inference_request, expected_dict",
     [
         (
-                InferenceRequest(
-                    model_name="my-model",
-                    inputs=[
-                        RequestInput(name="foo", datatype="INT32", shape=[1], data=[1]),
-                    ],
-                ),
-                {},
+            InferenceRequest(
+                model_name="my-model",
+                inputs=[
+                    RequestInput(name="foo", datatype="INT32", shape=[1], data=[1]),
+                ],
+            ),
+            {},
         ),
         (
-                InferenceRequest(
-                    model_name="my-model",
-                    inputs=[
-                        RequestInput(name="foo", datatype="INT32", shape=[1], data=[1]),
-                    ],
-                    parameters=Parameters(
-                        llm_parameters={"threshold": 10, "temperature": 20}
-                    ),
+            InferenceRequest(
+                model_name="my-model",
+                inputs=[
+                    RequestInput(name="foo", datatype="INT32", shape=[1], data=[1]),
+                ],
+                parameters=Parameters(
+                    llm_parameters={"threshold": 10, "temperature": 20}
                 ),
-                {"threshold": 10, "temperature": 20},
+            ),
+            {"threshold": 10, "temperature": 20},
         ),
     ],
 )
 def test_get_llm_parameters_from_request(
-        inference_request: InferenceRequest, expected_dict: dict
+    inference_request: InferenceRequest, expected_dict: dict
 ):
     params = _get_predict_parameters(inference_request)
     assert params == expected_dict
@@ -150,5 +140,6 @@ def test_tensor_dict_mapping(inference_request: InferenceRequest):
     prompt = SimplePromptTemplate()
     result = _decode_and_apply_prompt(prompt, inference_request)
     for col in result.columns:
-        assert result[col].values.tolist() ==\
-               ['{"foo": ["asd", "qwe"], "bar": ["asd", "qwe"]}']
+        assert result[col].values.tolist() == [
+            '{"foo": ["asd", "qwe"], "bar": ["asd", "qwe"]}'
+        ]
