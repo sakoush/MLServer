@@ -8,6 +8,7 @@ from mlserver import ModelSettings
 from mlserver.codecs import StringCodec
 from mlserver.types import ResponseOutput
 from .common import OpenAISettings, OpenAIModelTypeEnum
+from ..common import PROMPT_TEMPLATE_RESULT_FIELD
 from ..runtime import LLMProviderRuntimeBase
 
 
@@ -52,7 +53,10 @@ class OpenAIRuntime(LLMProviderRuntimeBase):
 
     async def _call_chat_impl(self, input_data: Any, params: Optional[dict]) -> dict:
         assert isinstance(input_data, pd.DataFrame)
-        data = _df_to_message(input_data)
+        if self._with_prompt_template:
+            data = _prompt_to_message(input_data)
+        else:
+            data = _df_to_message(input_data)
         return await openai.ChatCompletion.acreate(
             api_key=self._openai_settings.api_key,
             organization=self._openai_settings.organization,
@@ -113,6 +117,17 @@ class OpenAIRuntime(LLMProviderRuntimeBase):
             prompt=data,
             **params,  # type: ignore
         )
+
+
+def _prompt_to_message(df: pd.DataFrame) -> list[dict]:
+    # we only pass one the first item in the list
+    assert (
+        PROMPT_TEMPLATE_RESULT_FIELD in df.columns
+    ), f"{PROMPT_TEMPLATE_RESULT_FIELD} field not present"
+    return [
+        {"role": "user", "content": val}
+        for val in df[PROMPT_TEMPLATE_RESULT_FIELD].values.tolist()
+    ]
 
 
 def _df_to_message(df: pd.DataFrame) -> list[dict]:

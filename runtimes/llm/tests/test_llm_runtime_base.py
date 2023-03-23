@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 from mlserver import ModelSettings
-from mlserver.codecs import NumpyCodec, StringCodec
+from mlserver.codecs import StringCodec
 from mlserver.types import (
     ResponseOutput,
     InferenceRequest,
@@ -16,6 +16,7 @@ from mlserver.types import (
     RequestInput,
     Parameters,
 )
+from mlserver_llm.common import PROMPT_TEMPLATE_RESULT_FIELD
 from mlserver_llm.openai.openai_runtime import OpenAIRuntime
 from mlserver_llm.prompt.string_based import SimplePromptTemplate
 from mlserver_llm.runtime import (
@@ -140,6 +141,7 @@ def test_tensor_dict_mapping(inference_request: InferenceRequest):
     prompt = SimplePromptTemplate()
     result = _decode_and_apply_prompt(prompt, inference_request)
     for col in result.columns:
+        assert col == PROMPT_TEMPLATE_RESULT_FIELD
         assert result[col].values.tolist() == [
             '{"foo": ["asd", "qwe"], "bar": ["asd", "qwe"]}'
         ]

@@ -1,7 +1,6 @@
 import abc
 from abc import ABC
-from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
 
 class PromptTemplate(ABC):

@@ -8,6 +8,7 @@ import pytest
 from mlserver import ModelSettings
 from mlserver.types import InferenceRequest, RequestInput, InferenceResponse
 from mlserver_alibi_explain.common import convert_from_bytes
+from mlserver_llm.common import PROMPT_TEMPLATE_RESULT_FIELD
 from mlserver_llm.openai.openai_runtime import (
     OpenAIRuntime,
     _df_to_message,
@@ -15,6 +16,7 @@ from mlserver_llm.openai.openai_runtime import (
     _df_to_completion_prompt,
     _df_to_instruction,
     _df_to_images,
+    _prompt_to_message,
 )
 
 
@@ -218,6 +220,29 @@ async def test_openai_runtime__smoke(
 )
 def test_convert_df_to_messages(df: pd.DataFrame, expected_messages: list[dict]):
     messages = _df_to_message(df)
+    assert messages == expected_messages
+
+
+@pytest.mark.parametrize(
+    "df, expected_messages",
+    [
+        (
+            pd.DataFrame.from_dict({PROMPT_TEMPLATE_RESULT_FIELD: ["hello"]}),
+            [{"role": "user", "content": "hello"}],
+        ),
+        (
+            pd.DataFrame.from_dict(
+                {PROMPT_TEMPLATE_RESULT_FIELD: ["hello1", "hello2"]}
+            ),
+            [
+                {"role": "user", "content": "hello1"},
+                {"role": "user", "content": "hello2"},
+            ],
+        ),
+    ],
+)
+def test_convert_prompt_to_messages(df: pd.DataFrame, expected_messages: list[dict]):
+    messages = _prompt_to_message(df)
     assert messages == expected_messages
 
 

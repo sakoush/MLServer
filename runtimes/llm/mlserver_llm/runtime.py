@@ -16,7 +16,11 @@ from mlserver.types import (
 )
 from mlserver.utils import get_model_uri
 from mlserver_mlflow import TensorDictCodec
-from .common import LLM_CALL_PARAMETERS_TAG, PROVIDER_ID_TAG
+from .common import (
+    LLM_CALL_PARAMETERS_TAG,
+    PROVIDER_ID_TAG,
+    PROMPT_TEMPLATE_RESULT_FIELD,
+)
 from .dependency_reference import get_mlmodel_class_as_str, import_and_get_class
 from .prompt.base import PromptTemplate
 from .prompt.string_based import FStringPromptTemplate, SimplePromptTemplate
@@ -40,7 +44,7 @@ class LLMProviderRuntimeBase(MLModel):
     async def load(self) -> bool:
         # if uri is not none there is a prompt template to load
         if self._with_prompt_template:
-            if self._settings.parameters.uri:
+            if self._settings.parameters and self._settings.parameters.uri:
                 prompt_template_uri = await get_model_uri(self._settings)
                 self._static_prompt_template = FStringPromptTemplate(
                     prompt_template_uri
@@ -58,7 +62,7 @@ class LLMProviderRuntimeBase(MLModel):
         call_parameters = _get_predict_parameters(payload)
         # TODO: deal with error and retries
         if self._static_prompt_template:
-            input_data = await self._decode_and_apply_prompt(payload)
+            input_data = _decode_and_apply_prompt(self._static_prompt_template, payload)
         else:
             input_data = self.decode_request(payload, default_codec=PandasCodec)
 
@@ -99,7 +103,7 @@ def _apply_prompt_template(
 ) -> pd.DataFrame:
     data_dict = {k: [i.decode("utf-8") for i in val] for k, val in input_data.items()}
     prompt = static_prompt_template.format(**data_dict)
-    return pd.DataFrame([prompt], columns=["prompt"])
+    return pd.DataFrame([prompt], columns=[PROMPT_TEMPLATE_RESULT_FIELD])
 
 
 class LLMRuntime(WrapperMLModel):

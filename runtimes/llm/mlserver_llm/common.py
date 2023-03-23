@@ -7,6 +7,7 @@ from .openai.common import OpenAISettings
 LLM_CALL_PARAMETERS_TAG = "llm_parameters"
 _ENV_PREFIX_LLM_SETTINGS = "MLSERVER_MODEL_LLM_"
 PROVIDER_ID_TAG = "provider_id"
+PROMPT_TEMPLATE_RESULT_FIELD = "prompt_result"
 
 
 class LLMProviderEnum(str, Enum):
