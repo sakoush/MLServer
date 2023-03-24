@@ -1,11 +1,12 @@
 import json
 from typing import Any, Optional, Tuple
 
+import numpy as np
 import openai
 import pandas as pd
 
 from mlserver import ModelSettings
-from mlserver.codecs import StringCodec
+from mlserver.codecs import StringCodec, NumpyCodec
 from mlserver.types import ResponseOutput
 from .common import OpenAISettings, OpenAIModelTypeEnum
 from ..common import PROMPT_TEMPLATE_RESULT_FIELD
@@ -32,79 +33,100 @@ class OpenAIRuntime(LLMProviderRuntimeBase):
 
     async def _call_impl(
         self, input_data: Any, params: Optional[dict]
-    ) -> ResponseOutput:
+    ) -> list[ResponseOutput]:
         # TODO: make use of static parameters
         # TODO: implement prompt template in all valid cases
 
         if self._openai_settings.model_type == OpenAIModelTypeEnum.chat:
-            result = await self._call_chat_impl(input_data, params)
+            result_list, result_dict = await self._call_chat_impl(input_data, params)
         elif self._openai_settings.model_type == OpenAIModelTypeEnum.completions:
-            result = await self._call_completions_impl(input_data, params)
+            result_list, result_dict = await self._call_completions_impl(
+                input_data, params
+            )
         elif self._openai_settings.model_type == OpenAIModelTypeEnum.embeddings:
-            result = await self._call_embeddings_impl(input_data, params)
+            result_list, result_dict = await self._call_embeddings_impl(
+                input_data, params
+            )
         elif self._openai_settings.model_type == OpenAIModelTypeEnum.edits:
-            result = await self._call_instruction_impl(input_data, params)
+            result_list, result_dict = await self._call_instruction_impl(
+                input_data, params
+            )
         elif self._openai_settings.model_type == OpenAIModelTypeEnum.images:
-            result = await self._call_images_generations_impl(input_data, params)
+            result_list, result_dict = await self._call_images_generations_impl(
+                input_data, params
+            )
         else:
             raise TypeError(f"{self._openai_settings.model_type} not supported")
 
-        json_str = json.dumps(result)
-        return StringCodec.encode_output(payload=[json_str], name="output")
+        json_str = json.dumps(result_dict)
+        return [
+            StringCodec.encode_output(payload=result_list, name="output")
+            if self._openai_settings.model_type != OpenAIModelTypeEnum.embeddings
+            else NumpyCodec.encode_output(payload=np.array(result_list), name="output"),
+            StringCodec.encode_output(payload=[json_str], name="output_all"),
+        ]
 
-    async def _call_chat_impl(self, input_data: Any, params: Optional[dict]) -> dict:
+    async def _call_chat_impl(
+        self, input_data: Any, params: Optional[dict]
+    ) -> Tuple[list[str], dict]:
         assert isinstance(input_data, pd.DataFrame)
         if self._with_prompt_template:
             data = _prompt_to_message(input_data)
         else:
             data = _df_to_message(input_data)
-        return await openai.ChatCompletion.acreate(
+        result = await openai.ChatCompletion.acreate(
             api_key=self._openai_settings.api_key,
             organization=self._openai_settings.organization,
             model=self._openai_settings.model_id,
             messages=data,
             **params,  # type: ignore
         )
+        contents = [choice["message"]["content"] for choice in result["choices"]]
+        return contents, result
 
     async def _call_embeddings_impl(
         self, input_data: Any, params: Optional[dict]
-    ) -> dict:
+    ) -> Tuple[list, dict]:
         assert isinstance(input_data, pd.DataFrame)
         if self._with_prompt_template:
             data = _prompt_to_completion_prompt(input_data)
         else:
             data = _df_to_embeddings_input(input_data)
-        return await openai.Embedding.acreate(
+        result = await openai.Embedding.acreate(
             api_key=self._openai_settings.api_key,
             organization=self._openai_settings.organization,
             model=self._openai_settings.model_id,
             input=data,
             **params,  # type: ignore
         )
+        embeddings = [embedding["embedding"] for embedding in result["data"]]
+        return embeddings, result
 
     async def _call_completions_impl(
         self, input_data: Any, params: Optional[dict]
-    ) -> dict:
+    ) -> Tuple[list[str], dict]:
         assert isinstance(input_data, pd.DataFrame)
         if self._with_prompt_template:
             data = _prompt_to_completion_prompt(input_data)
         else:
             data = _df_to_completion_prompt(input_data)
-        return await openai.Completion.acreate(
+        result = await openai.Completion.acreate(
             api_key=self._openai_settings.api_key,
             organization=self._openai_settings.organization,
             model=self._openai_settings.model_id,
             prompt=data,
             **params,  # type: ignore
         )
+        contents = [choice["text"] for choice in result["choices"]]
+        return contents, result
 
     async def _call_instruction_impl(
         self, input_data: Any, params: Optional[dict]
-    ) -> dict:
+    ) -> Tuple[list[str], dict]:
         # TODO: add template logic
         assert isinstance(input_data, pd.DataFrame)
         data, instruction = _df_to_instruction(input_data)
-        return await openai.Edit.acreate(
+        result = await openai.Edit.acreate(
             api_key=self._openai_settings.api_key,
             organization=self._openai_settings.organization,
             model=self._openai_settings.model_id,
@@ -112,20 +134,24 @@ class OpenAIRuntime(LLMProviderRuntimeBase):
             instruction=instruction,
             **params,  # type: ignore
         )
+        contents = [choice["text"] for choice in result["choices"]]
+        return contents, result
 
     async def _call_images_generations_impl(
         self, input_data: Any, params: Optional[dict]
-    ) -> dict:
+    ) -> Tuple[list[str], dict]:
         # TODO: add template logic
         # note: no model_id for this api
         assert isinstance(input_data, pd.DataFrame)
         data = _df_to_images(input_data)
-        return await openai.Image.acreate(
+        result = await openai.Image.acreate(
             api_key=self._openai_settings.api_key,
             organization=self._openai_settings.organization,
             prompt=data,
             **params,  # type: ignore
         )
+        contents = [data["url"] for data in result["data"]]
+        return contents, result
 
 
 def _prompt_to_message(df: pd.DataFrame) -> list[dict]:

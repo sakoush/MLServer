@@ -73,12 +73,12 @@ class LLMProviderRuntimeBase(MLModel):
         return InferenceResponse(
             model_name=self.name,
             model_version=self.version,
-            outputs=[output_data],
+            outputs=output_data,
         )
 
     async def _call_impl(
         self, input_data: Any, params: Optional[dict]
-    ) -> ResponseOutput:
+    ) -> list[ResponseOutput]:
         raise NotImplementedError
 
 

@@ -16,7 +16,8 @@ from mlserver_llm.openai.openai_runtime import (
     _df_to_completion_prompt,
     _df_to_instruction,
     _df_to_images,
-    _prompt_to_message, _prompt_to_completion_prompt,
+    _prompt_to_message,
+    _prompt_to_completion_prompt,
 )
 
 
@@ -49,7 +50,17 @@ def _get_embeddings_result() -> dict:
                 ],
                 "index": 0,
                 "object": "embedding",
-            }
+            },
+            {
+                "embedding": [
+                    -0.006929283495992422,
+                    -0.005336422007530928,
+                    -4.547132266452536e-05,
+                    -0.024047505110502243,
+                ],
+                "index": 1,
+                "object": "embedding",
+            },
         ],
         "model": "text-embedding-ada-002",
         "object": "list",
@@ -194,10 +205,11 @@ async def test_openai_runtime__smoke(
         mock_interface.acreate = _mocked_impl
         res = await rt.predict(input_request)
         assert isinstance(res, InferenceResponse)
-        output = convert_from_bytes(res.outputs[0], ty=str)
-        output_dict = json.loads(output)
-        assert output_dict == output_result
-        assert res.outputs[0].name == "output"
+
+        output_1 = convert_from_bytes(res.outputs[1], ty=str)
+        output_1_dict = json.loads(output_1)
+        assert output_1_dict == output_result
+        assert res.outputs[1].name == "output_all"
 
 
 @pytest.mark.parametrize(
@@ -292,13 +304,15 @@ def test_convert_df_to_prompt(df: pd.DataFrame, expected_prompt: list[str]):
     "df, expected_prompt",
     [
         (
-            pd.DataFrame.from_dict({
-                PROMPT_TEMPLATE_RESULT_FIELD: ["this is a test prompt"]}),
+            pd.DataFrame.from_dict(
+                {PROMPT_TEMPLATE_RESULT_FIELD: ["this is a test prompt"]}
+            ),
             ["this is a test prompt"],
         ),
         (
-            pd.DataFrame.from_dict({
-                PROMPT_TEMPLATE_RESULT_FIELD: ["prompt1", "prompt2"]}),
+            pd.DataFrame.from_dict(
+                {PROMPT_TEMPLATE_RESULT_FIELD: ["prompt1", "prompt2"]}
+            ),
             [
                 "prompt1",
                 "prompt2",
@@ -306,7 +320,9 @@ def test_convert_df_to_prompt(df: pd.DataFrame, expected_prompt: list[str]):
         ),
     ],
 )
-def test_convert_prompt_to_completion_input(df: pd.DataFrame, expected_prompt: list[str]):
+def test_convert_prompt_to_completion_input(
+    df: pd.DataFrame, expected_prompt: list[str]
+):
     prompt = _prompt_to_completion_prompt(df)
     assert prompt == expected_prompt
 
