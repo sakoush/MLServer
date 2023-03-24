@@ -52,11 +52,11 @@ async def test_runtime_base__smoke(inference_request: InferenceRequest, extra: d
 
         async def _call_impl(
             self, input_data: Any, params: Optional[dict]
-        ) -> ResponseOutput:
+        ) -> list[ResponseOutput]:
             assert isinstance(input_data, pd.DataFrame)
-            return ResponseOutput(
-                name="foo", datatype="INT32", shape=[1, 1, 1], data=[1]
-            )
+            return [
+                ResponseOutput(name="foo", datatype="INT32", shape=[1, 1, 1], data=[1])
+            ]
 
     ml = _DummyModel(
         settings=ModelSettings(
