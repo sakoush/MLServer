@@ -70,7 +70,10 @@ class OpenAIRuntime(LLMProviderRuntimeBase):
         self, input_data: Any, params: Optional[dict]
     ) -> dict:
         assert isinstance(input_data, pd.DataFrame)
-        data = _df_to_embeddings_input(input_data)
+        if self._with_prompt_template:
+            data = _prompt_to_completion_prompt(input_data)
+        else:
+            data = _df_to_embeddings_input(input_data)
         return await openai.Embedding.acreate(
             api_key=self._openai_settings.api_key,
             organization=self._openai_settings.organization,
@@ -83,7 +86,10 @@ class OpenAIRuntime(LLMProviderRuntimeBase):
         self, input_data: Any, params: Optional[dict]
     ) -> dict:
         assert isinstance(input_data, pd.DataFrame)
-        data = _df_to_completion_prompt(input_data)
+        if self._with_prompt_template:
+            data = _prompt_to_completion_prompt(input_data)
+        else:
+            data = _df_to_completion_prompt(input_data)
         return await openai.Completion.acreate(
             api_key=self._openai_settings.api_key,
             organization=self._openai_settings.organization,
@@ -95,6 +101,7 @@ class OpenAIRuntime(LLMProviderRuntimeBase):
     async def _call_instruction_impl(
         self, input_data: Any, params: Optional[dict]
     ) -> dict:
+        # TODO: add template logic
         assert isinstance(input_data, pd.DataFrame)
         data, instruction = _df_to_instruction(input_data)
         return await openai.Edit.acreate(
@@ -109,6 +116,7 @@ class OpenAIRuntime(LLMProviderRuntimeBase):
     async def _call_images_generations_impl(
         self, input_data: Any, params: Optional[dict]
     ) -> dict:
+        # TODO: add template logic
         # note: no model_id for this api
         assert isinstance(input_data, pd.DataFrame)
         data = _df_to_images(input_data)
@@ -121,7 +129,6 @@ class OpenAIRuntime(LLMProviderRuntimeBase):
 
 
 def _prompt_to_message(df: pd.DataFrame) -> list[dict]:
-    # we only pass one the first item in the list
     assert (
         PROMPT_TEMPLATE_RESULT_FIELD in df.columns
     ), f"{PROMPT_TEMPLATE_RESULT_FIELD} field not present"
@@ -137,14 +144,16 @@ def _df_to_message(df: pd.DataFrame) -> list[dict]:
     return df[["role", "content"]].to_dict(orient="records")
 
 
-def _df_to_embeddings_input(df: pd.DataFrame) -> list[dict]:
-    assert "input" in df.columns, "input field not present"
-    return df[["input"]].values.flatten().tolist()
+def _df_to_embeddings_input(df: pd.DataFrame) -> list[str]:
+    return _df_to_list(df, "input")
 
 
-def _df_to_completion_prompt(df: pd.DataFrame) -> list[dict]:
-    assert "prompt" in df.columns, "prompt field not present"
-    return df[["prompt"]].values.flatten().tolist()
+def _df_to_completion_prompt(df: pd.DataFrame) -> list[str]:
+    return _df_to_list(df, "prompt")
+
+
+def _prompt_to_completion_prompt(df: pd.DataFrame) -> list[str]:
+    return _df_to_list(df, PROMPT_TEMPLATE_RESULT_FIELD)
 
 
 def _df_to_instruction(df: pd.DataFrame) -> Tuple[str, str]:
@@ -156,3 +165,8 @@ def _df_to_instruction(df: pd.DataFrame) -> Tuple[str, str]:
 def _df_to_images(df: pd.DataFrame) -> str:
     assert "prompt" in df.columns, "prompt field not present"
     return df[["prompt"]].values[0].flatten()[0]
+
+
+def _df_to_list(df: pd.DataFrame, field: str) -> list[str]:
+    assert field in df.columns, f"{field} field not present"
+    return df[[field]].values.flatten().tolist()

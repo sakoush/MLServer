@@ -16,7 +16,7 @@ from mlserver_llm.openai.openai_runtime import (
     _df_to_completion_prompt,
     _df_to_instruction,
     _df_to_images,
-    _prompt_to_message,
+    _prompt_to_message, _prompt_to_completion_prompt,
 )
 
 
@@ -285,6 +285,29 @@ def test_convert_df_to_embeddings(df: pd.DataFrame, expected_input: list[str]):
 )
 def test_convert_df_to_prompt(df: pd.DataFrame, expected_prompt: list[str]):
     prompt = _df_to_completion_prompt(df)
+    assert prompt == expected_prompt
+
+
+@pytest.mark.parametrize(
+    "df, expected_prompt",
+    [
+        (
+            pd.DataFrame.from_dict({
+                PROMPT_TEMPLATE_RESULT_FIELD: ["this is a test prompt"]}),
+            ["this is a test prompt"],
+        ),
+        (
+            pd.DataFrame.from_dict({
+                PROMPT_TEMPLATE_RESULT_FIELD: ["prompt1", "prompt2"]}),
+            [
+                "prompt1",
+                "prompt2",
+            ],
+        ),
+    ],
+)
+def test_convert_prompt_to_completion_input(df: pd.DataFrame, expected_prompt: list[str]):
+    prompt = _prompt_to_completion_prompt(df)
     assert prompt == expected_prompt
 
 
