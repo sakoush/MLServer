@@ -7,7 +7,6 @@ from mlserver.codecs import (
     PandasCodec,
 )
 from mlserver.model import MLModel
-from mlserver.model_wrapper import WrapperMLModel
 from mlserver.settings import ModelSettings
 from mlserver.types import (
     InferenceRequest,
@@ -109,10 +108,10 @@ def _apply_prompt_template(
     return pd.DataFrame([prompt], columns=[PROMPT_TEMPLATE_RESULT_FIELD])
 
 
-class LLMRuntime(WrapperMLModel):
+class LLMRuntime:
     """Wrapper / Factory class for specific llm providers"""
 
-    def __init__(self, settings: ModelSettings):
+    def __new__(cls, settings: ModelSettings):
         assert settings.parameters is not None
         assert PROVIDER_ID_TAG in settings.parameters.extra  # type: ignore
 
@@ -120,4 +119,4 @@ class LLMRuntime(WrapperMLModel):
 
         rt_class = import_and_get_class(get_mlmodel_class_as_str(provider_id))
 
-        self._rt = rt_class(settings)
+        return rt_class(settings)

@@ -101,7 +101,7 @@ async def test_runtime_base__smoke(inference_request: InferenceRequest, extra: d
 )
 async def test_runtime_factory__smoke(settings: ModelSettings):
     ml = LLMRuntime(settings=settings)
-    assert isinstance(ml._rt, OpenAIRuntime)
+    assert isinstance(ml, OpenAIRuntime)
 
 
 @pytest.mark.parametrize(
