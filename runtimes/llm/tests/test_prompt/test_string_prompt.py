@@ -3,7 +3,11 @@ import tempfile
 
 import pytest
 
-from mlserver_llm.prompt.string_based import FStringPromptTemplate, SimplePromptTemplate
+from mlserver_llm.prompt.string_based import (
+    FilePromptTemplate,
+    SimplePromptTemplate,
+    StringPromptTemplate,
+)
 
 
 @pytest.mark.parametrize(
@@ -33,16 +37,51 @@ from mlserver_llm.prompt.string_based import FStringPromptTemplate, SimplePrompt
         ),
     ],
 )
-def test_string_prompt_template__smoke(template: str, args: dict, expected_string: str):
+def test_file_prompt_template__smoke(template: str, args: dict, expected_string: str):
     with tempfile.TemporaryDirectory() as tempdir:
         # you can e.g. create a file here:
         tmp_path = os.path.join(tempdir, "template.txt")
         with open(tmp_path, "w") as f:
             f.write(template)
 
-        prompt = FStringPromptTemplate(tmp_path)
+        prompt = FilePromptTemplate(tmp_path)
         res = prompt.format(**args)
         assert res == expected_string
+
+
+@pytest.mark.parametrize(
+    "template, args, expected_string",
+    [
+        ("hello", {}, "hello"),
+        (
+            """
+            this is a template
+
+            for chat
+            {input_1}
+
+            {input_2}
+            end
+            """,
+            {"input_1": "hello there", "input_2": "hi"},
+            """
+            this is a template
+
+            for chat
+            hello there
+
+            hi
+            end
+            """,
+        ),
+    ],
+)
+def test_fromstring_prompt_template__smoke(
+    template: str, args: dict, expected_string: str
+):
+    prompt = StringPromptTemplate(template)
+    res = prompt.format(**args)
+    assert res == expected_string
 
 
 @pytest.mark.parametrize(

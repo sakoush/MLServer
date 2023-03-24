@@ -19,10 +19,15 @@ from .common import (
     LLM_CALL_PARAMETERS_TAG,
     PROVIDER_ID_TAG,
     PROMPT_TEMPLATE_RESULT_FIELD,
+    PROMPT_TEMPLATE_INPUT_FIELD,
 )
 from .dependency_reference import get_mlmodel_class_as_str, import_and_get_class
 from .prompt.base import PromptTemplate
-from .prompt.string_based import FStringPromptTemplate, SimplePromptTemplate
+from .prompt.string_based import (
+    FilePromptTemplate,
+    SimplePromptTemplate,
+    StringPromptTemplate,
+)
 
 
 class LLMProviderRuntimeBase(MLModel):
@@ -45,9 +50,7 @@ class LLMProviderRuntimeBase(MLModel):
         if self._with_prompt_template:
             if self._settings.parameters and self._settings.parameters.uri:
                 prompt_template_uri = await get_model_uri(self._settings)
-                self._static_prompt_template = FStringPromptTemplate(
-                    prompt_template_uri
-                )
+                self._static_prompt_template = FilePromptTemplate(prompt_template_uri)
             else:
                 self._static_prompt_template = SimplePromptTemplate()
 
@@ -100,11 +103,21 @@ def _decode_and_apply_prompt(
 def _apply_prompt_template(
     static_prompt_template: PromptTemplate, input_data: dict[str, ndarray]
 ) -> pd.DataFrame:
+    # TODO: we need to think more about the data manipulations done here
+    # refer to tests for use cases
+    prompt_template = static_prompt_template
+    if PROMPT_TEMPLATE_INPUT_FIELD in input_data:
+        prompt_template_str = list(input_data[PROMPT_TEMPLATE_INPUT_FIELD])[0]
+        if isinstance(prompt_template_str, bytes):
+            prompt_template_str = prompt_template_str.decode("utf-8")
+        prompt_template = StringPromptTemplate(prompt_template_str)
+
     data_dict = {
         k: [i.decode("utf-8") if isinstance(i, bytes) else i for i in val]
         for k, val in input_data.items()
+        if k != PROMPT_TEMPLATE_INPUT_FIELD
     }
-    prompt = static_prompt_template.format(**data_dict)
+    prompt = prompt_template.format(**data_dict)
     return pd.DataFrame([prompt], columns=[PROMPT_TEMPLATE_RESULT_FIELD])
 
 

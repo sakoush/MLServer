@@ -15,7 +15,10 @@ from mlserver.types import (
     RequestInput,
     Parameters,
 )
-from mlserver_llm.common import PROMPT_TEMPLATE_RESULT_FIELD
+from mlserver_llm.common import (
+    PROMPT_TEMPLATE_RESULT_FIELD,
+    PROMPT_TEMPLATE_INPUT_FIELD,
+)
 from mlserver_llm.openai.openai_runtime import OpenAIRuntime
 from mlserver_llm.prompt.string_based import SimplePromptTemplate
 from mlserver_llm.runtime import (
@@ -136,11 +139,47 @@ def test_get_llm_parameters_from_request(
     assert params == expected_dict
 
 
-def test_tensor_dict_mapping(inference_request: InferenceRequest):
-    prompt = SimplePromptTemplate()
-    result = _decode_and_apply_prompt(prompt, inference_request)
+@pytest.mark.parametrize(
+    "req, expected_result",
+    [
+        (
+            InferenceRequest(
+                model_name="my-model",
+                inputs=[
+                    RequestInput(
+                        name="foo", datatype="BYTES", shape=[1], data=["1", "2"]
+                    ),
+                    RequestInput(
+                        name="bar", datatype="BYTES", shape=[1], data=["3", "4"]
+                    ),
+                ],
+            ),
+            '{"foo": ["1", "2"], "bar": ["3", "4"]}',
+        ),
+        (
+            InferenceRequest(
+                model_name="my-model",
+                inputs=[
+                    RequestInput(
+                        name="foo", datatype="BYTES", shape=[1], data=["1", "2"]
+                    ),
+                    RequestInput(
+                        name="bar", datatype="BYTES", shape=[1], data=["3", "4"]
+                    ),
+                    RequestInput(
+                        name=PROMPT_TEMPLATE_INPUT_FIELD,
+                        datatype="BYTES",
+                        shape=[1],
+                        data=["{foo} and {bar}"],
+                    ),
+                ],
+            ),
+            "['1', '2'] and ['3', '4']",
+        ),
+    ],
+)
+def test_apply_prompt_template(req: InferenceRequest, expected_result):
+    result = _decode_and_apply_prompt(SimplePromptTemplate(), req)
     for col in result.columns:
         assert col == PROMPT_TEMPLATE_RESULT_FIELD
-        assert result[col].values.tolist() == [
-            '{"foo": ["asd", "qwe"], "bar": ["asd", "qwe"]}'
-        ]
+        assert result[col].values.tolist() == [expected_result]
