@@ -3,7 +3,6 @@ Smoke tests for base runtime
 """
 from typing import Any, Optional
 
-import numpy as np
 import pandas as pd
 import pytest
 
